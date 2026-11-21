@@ -1,12 +1,12 @@
 package com.coworkinghub.coworkinghub.service;
 
+import com.coworkinghub.coworkinghub.exception.ResourceNotFoundException;
 import com.coworkinghub.coworkinghub.model.*;
 import com.coworkinghub.coworkinghub.repository.CoworkingSpaceRepository;
 import com.coworkinghub.coworkinghub.repository.EquipmentRepository;
 import com.coworkinghub.coworkinghub.repository.ReservationRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -14,26 +14,26 @@ import java.util.Set;
 @Service
 public class ReservationService {
 
-    @Autowired
-    private ReservationRepository reservationRepository;
+    private final ReservationRepository reservationRepository;
+    private final CoworkingSpaceRepository coworkingSpaceRepository;
+    private final EquipmentRepository equipmentRepository;
 
-    @Autowired
-    private CoworkingSpaceRepository coworkingSpaceRepository;
-
-    @Autowired
-    private EquipmentRepository equipmentRepository;
-
-    // Other required repositories...
+    public ReservationService(ReservationRepository reservationRepository,
+                              CoworkingSpaceRepository coworkingSpaceRepository,
+                              EquipmentRepository equipmentRepository) {
+        this.reservationRepository = reservationRepository;
+        this.coworkingSpaceRepository = coworkingSpaceRepository;
+        this.equipmentRepository = equipmentRepository;
+    }
 
     @Transactional
     public Reservation createReservation(ReservationDto reservationDto) {
-        // Validate the requested coworking space and equipment availability
-        CoworkingSpace space = coworkingSpaceRepository.findById(reservationDto.getCoworkingSpaceId())
-                .orElseThrow(() -> new RuntimeException("Coworking space not found"));
+        Long spaceId = reservationDto.getCoworkingSpaceId();
+        CoworkingSpace space = coworkingSpaceRepository.findById(spaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Coworking space", spaceId));
 
-        // Check availability logic here...
+        // TODO: availability checks (overlapping reservations, capacity) are not implemented yet.
 
-        // Create a new Reservation
         Reservation reservation = new Reservation();
         reservation.setCoworkingSpace(space);
         reservation.setDate(reservationDto.getDate());
@@ -42,31 +42,28 @@ public class ReservationService {
         reservation.setNumberOfPeople(reservationDto.getNumberOfPeople());
         reservation.setStatus(ReservationStatus.PENDING);
 
-        // Handle equipment reservation
         Set<Equipment> reservedEquipments = new HashSet<>();
-        reservationDto.getEquipmentIds().forEach(id -> {
-            Equipment equipment = equipmentRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Equipment not found"));
-            reservedEquipments.add(equipment);
-
-            // Additional logic to check quantity and availability...
-        });
+        if (reservationDto.getEquipmentIds() != null) {
+            for (Long equipmentId : reservationDto.getEquipmentIds()) {
+                reservedEquipments.add(equipmentRepository.findById(equipmentId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Equipment", equipmentId)));
+            }
+        }
         reservation.setReservedEquipments(reservedEquipments);
 
-        // Calculate total price logic here...
+        // TODO: totalPrice is not calculated yet; the pricing rule has not been defined.
 
-        // Save the Reservation
         return reservationRepository.save(reservation);
     }
+
+    @Transactional
     public Reservation updateReservationStatus(Long reservationId, ReservationStatus newStatus, String reason) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("Reservation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation", reservationId));
 
         reservation.setStatus(newStatus);
         reservation.setStatusChangeReason(reason);
 
         return reservationRepository.save(reservation);
     }
-
-    // Other service methods...
 }

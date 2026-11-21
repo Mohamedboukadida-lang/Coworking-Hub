@@ -1,5 +1,6 @@
 package com.coworkinghub.coworkinghub.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,7 +8,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.Set;
-
 
 @Entity
 @Getter
@@ -26,17 +26,16 @@ public class Compte {
     private AccountType typeCompte;
 
     @OneToMany(mappedBy = "compte")
+    @JsonIgnore
     private Set<Reservation> reservations;
 
-    // Assuming an admin can submit news
+    // News items submitted by this account (admins)
     @OneToMany(mappedBy = "submittedBy")
+    @JsonIgnore
     private Set<News> newsSubmissions;
 
-    // If owners have their coworking spaces
+    // Coworking spaces owned by this account (owners)
     @OneToMany(mappedBy = "owner")
+    @JsonIgnore
     private Set<CoworkingSpace> ownedSpaces;
-}
-
-enum AccountType {
-    ADMIN, USER, OWNER;
 }

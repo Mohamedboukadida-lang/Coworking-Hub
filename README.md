@@ -14,6 +14,36 @@ To build a robust and scalable application, we employed a combination of modern 
 
 - **PostgreSQL**: Our chosen database for secure and reliable storage of all application data, including user profiles, reservations, and space details. It provides comprehensive features and is well-suited for handling complex queries and transactions.
 
+## Running the backend
+
+The Spring Boot API lives in `coworkinghub/` (Java 21, Spring Boot 3.5). Database credentials are read from environment variables:
+
+| Variable | Default |
+|---|---|
+| `DB_URL` | `jdbc:postgresql://localhost:5432/postgres` |
+| `DB_USERNAME` | `postgres` |
+| `DB_PASSWORD` | *(empty)* |
+| `SERVER_PORT` | `8081` |
+
+```bash
+cd coworkinghub
+DB_PASSWORD=your-password ./mvnw spring-boot:run
+```
+
+Tests use an in-memory H2 database and need no PostgreSQL server: `./mvnw test`.
+
+### API
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/users/` | Create an account |
+| `POST` | `/api/coworking-spaces/` | Create a coworking space |
+| `POST` | `/api/coworking-spaces/{id}/add-random-equipment` | Add one sample item of each equipment type |
+| `POST` | `/api/reservations/` | Create a reservation (status `PENDING`) |
+| `PUT` | `/api/reservations/{id}/status` | Accept or decline a reservation |
+
+Unknown IDs return `404` and invalid bodies return `400`, both as RFC 7807 problem details.
+
 ## Key Features
 
 - **Space Discovery**: Users can explore a variety of coworking spaces with detailed profiles, including amenities, location, pricing, and availability.

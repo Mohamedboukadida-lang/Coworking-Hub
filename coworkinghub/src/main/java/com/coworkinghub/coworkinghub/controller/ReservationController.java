@@ -4,7 +4,7 @@ import com.coworkinghub.coworkinghub.model.Reservation;
 import com.coworkinghub.coworkinghub.model.ReservationDto;
 import com.coworkinghub.coworkinghub.model.ReservationStatusUpdateDto;
 import com.coworkinghub.coworkinghub.service.ReservationService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,27 +12,23 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/reservations")
 public class ReservationController {
 
-    @Autowired
+    private final ReservationService reservationService;
 
-    private ReservationService reservationService;
-
-    @PostMapping("/")
-    public ResponseEntity<Reservation> createReservation(@RequestBody ReservationDto reservationDto) {
-        Reservation reservation = reservationService.createReservation(reservationDto);
-        return ResponseEntity.ok(reservation);
+    public ReservationController(ReservationService reservationService) {
+        this.reservationService = reservationService;
     }
 
-
-    // Other endpoints...
+    @PostMapping({"", "/"})
+    public ResponseEntity<Reservation> createReservation(@Valid @RequestBody ReservationDto reservationDto) {
+        return ResponseEntity.ok(reservationService.createReservation(reservationDto));
+    }
 
     @PutMapping("/{id}/status")
     public ResponseEntity<Reservation> updateReservationStatus(@PathVariable Long id,
-                                                               @RequestBody ReservationStatusUpdateDto statusUpdateDto) {
+                                                               @Valid @RequestBody ReservationStatusUpdateDto statusUpdateDto) {
         Reservation updatedReservation = reservationService.updateReservationStatus(id,
                 statusUpdateDto.getStatus(),
                 statusUpdateDto.getReason());
         return ResponseEntity.ok(updatedReservation);
     }
-
-    // Other API endpoints as required...
 }

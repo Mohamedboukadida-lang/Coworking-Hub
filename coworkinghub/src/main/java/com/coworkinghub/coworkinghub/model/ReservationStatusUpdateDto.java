@@ -1,7 +1,6 @@
 package com.coworkinghub.coworkinghub.model;
 
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,12 +11,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReservationStatusUpdateDto {
-    @Enumerated(EnumType.ORDINAL)
-
+    @NotNull
     private ReservationStatus status;
     private String reason;
-
-    // Getters and setters...
-
-    // Constructor...
 }

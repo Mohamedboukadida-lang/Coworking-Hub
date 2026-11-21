@@ -2,8 +2,6 @@ package com.coworkinghub.coworkinghub.controller;
 
 import com.coworkinghub.coworkinghub.model.Compte;
 import com.coworkinghub.coworkinghub.service.UserService;
-import org.apache.catalina.User;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,14 +12,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @PostMapping("/")
-    public ResponseEntity<Compte> createUser(@RequestBody Compte compte) {
-        Compte createdUser = userService.createUser(compte);
-        return ResponseEntity.ok(createdUser);
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
 
-    // Other endpoints as needed
+    @PostMapping({"", "/"})
+    public ResponseEntity<Compte> createUser(@RequestBody Compte compte) {
+        return ResponseEntity.ok(userService.createUser(compte));
+    }
 }

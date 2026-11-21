@@ -1,5 +1,6 @@
 package com.coworkinghub.coworkinghub.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,13 +19,12 @@ public class Equipment {
 
     private String name;
     private double price;
+
     @Enumerated(EnumType.ORDINAL)
     private EquipmentType typeOfEquipment;
+
     @ManyToOne
     @JoinColumn(name = "coworking_space_id")
+    @JsonIgnore
     private CoworkingSpace coworkingSpace;
-
-
-    // Getters, Setters, Constructors
 }
-

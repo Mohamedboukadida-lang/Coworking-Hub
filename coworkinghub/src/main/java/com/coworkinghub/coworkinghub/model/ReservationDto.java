@@ -1,7 +1,7 @@
 package com.coworkinghub.coworkinghub.model;
 
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,13 +17,15 @@ import java.util.Set;
 public class ReservationDto {
     private Date date;
     private String time;
+
+    @Positive
     private Integer hours;
+
+    @Positive
     private Integer numberOfPeople;
+
+    @NotNull
     private Long coworkingSpaceId;
+
     private Set<Long> equipmentIds;
-
-
-
-    // Getters, Setters, Constructors
 }
-
