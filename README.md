@@ -1,5 +1,7 @@
 # Coworking-Hub
 
+![Explore coworking spaces in Tunis on the Coworking Hub web app](docs/screenshots/01-explore.webp)
+
 ## Objective
 
 Coworking-Hub is designed to streamline the process of finding, reserving, and utilizing coworking spaces. It caters to freelancers, entrepreneurs, and businesses seeking flexible and productive work environments. By centralizing various coworking options, users can effortlessly compare spaces, book amenities, and connect with like-minded professionals.
@@ -8,11 +10,42 @@ Coworking-Hub is designed to streamline the process of finding, reserving, and u
 
 To build a robust and scalable application, we employed a combination of modern and efficient technologies:
 
-- **Flutter**: Used for creating a seamless and responsive user interface. Flutter enables a cross-platform solution, ensuring our app delivers a consistent experience across both iOS and Android devices.
+- **React + TypeScript web app** (`web/`): the current front end. Responsive (phone to desktop), light and dark themes, map of spaces, live price estimates, booking, and an owner dashboard. See [web/README.md](web/README.md).
+
+- **Flutter**: the original mobile prototype (`app-release.apk`, screenshots in `UI/`, `demo.mp4`). Its source code is not in this repository, and the prototype does not call the API.
 
 - **Spring Boot**: Powers the backend services, offering a straightforward approach to setting up and running web applications. It is the backbone that handles business logic, user authentication, and data processing.
 
 - **PostgreSQL**: Our chosen database for secure and reliable storage of all application data, including user profiles, reservations, and space details. It provides comprehensive features and is well-suited for handling complex queries and transactions.
+
+## Web app
+
+| | |
+|---|---|
+| ![Space page with live price estimate](docs/screenshots/02-space-and-booking.webp) | ![Owner dashboard with requests to review](docs/screenshots/06-owner-dashboard.webp) |
+| Space page: rooms, equipment and a live price estimate | Owner dashboard: requests to review, confirmed revenue, spaces |
+| ![Clear message when a slot is already booked](docs/screenshots/04-slot-already-booked.webp) | ![Managing rooms, equipment and bookings](docs/screenshots/07-manage-space.webp) |
+| Double bookings are refused with a clear message | Managing rooms, prices, equipment and bookings |
+| ![My bookings](docs/screenshots/05-my-bookings.webp) | ![Dark mode](docs/screenshots/11-explore-dark.webp) |
+| A member's bookings and their status | Dark mode follows the system setting |
+
+<p>
+  <img src="docs/screenshots/09-mobile-explore.webp" alt="Explore on a phone" width="260">
+  <img src="docs/screenshots/09-mobile-space.webp" alt="A space on a phone" width="260">
+</p>
+
+**Demo videos:** [web walkthrough](docs/demo/web-walkthrough.mp4) (a member books a room, the owner accepts it) · [API walkthrough](docs/demo/api-walkthrough.mp4) (ownership 403s, double-booking 409, every request real).
+
+Quick start with demo data, once the backend below is running:
+
+```bash
+cd web
+npm install
+npm run seed
+npm run dev
+```
+
+Then open http://localhost:5173 and log in as `youssef@demo.coworkinghub.tn` (member) or `sana@demo.coworkinghub.tn` (owner), password `demo-pass-123`.
 
 ## Running the backend
 
