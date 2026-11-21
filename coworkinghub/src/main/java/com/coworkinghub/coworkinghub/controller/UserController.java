@@ -2,7 +2,6 @@ package com.coworkinghub.coworkinghub.controller;
 
 import com.coworkinghub.coworkinghub.dto.UserUpdateRequest;
 import com.coworkinghub.coworkinghub.model.Compte;
-import com.coworkinghub.coworkinghub.security.CurrentUser;
 import com.coworkinghub.coworkinghub.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,12 +23,12 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<Compte> me() {
-        return ResponseEntity.ok(userService.getById(CurrentUser.requireId()));
+        return ResponseEntity.ok(userService.me());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Compte> getUser(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.getById(id));
+    public ResponseEntity<Object> getUser(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getVisibleProfile(id));
     }
 
     @PutMapping("/{id}")

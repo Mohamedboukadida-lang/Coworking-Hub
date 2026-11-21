@@ -1,6 +1,5 @@
 package com.coworkinghub.coworkinghub.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -8,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -21,11 +20,10 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Same "yyyy-MM-dd" shape on create and on read (a DATE column comes back as java.sql.Date).
-    @Temporal(TemporalType.DATE)
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "UTC")
-    private Date date;
+    // LocalDate maps to the same DATE column as before, but has no time zone to shift the day.
+    private LocalDate date;
 
+    // Start time, stored as "HH:mm".
     private String time;
     private Integer hours;
     private Integer numberOfPeople;

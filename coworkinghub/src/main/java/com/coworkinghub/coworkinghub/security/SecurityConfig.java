@@ -3,6 +3,7 @@ package com.coworkinghub.coworkinghub.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,9 +16,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     /**
-     * When false (the default) every endpoint is reachable without a token, so the released mobile app
-     * keeps working; a valid token still identifies the caller. Set APP_SECURITY_REQUIRE_AUTH=true to
-     * require a token everywhere except registration and login.
+     * Anything that changes data or reads private data always needs a token; who may do what is checked in
+     * the services (see AccessService). When false (the default) the public catalogue (spaces, rooms,
+     * equipment) can be browsed without a token; true requires a token for that too.
      */
     @Value("${app.security.require-auth:false}")
     private boolean requireAuth;
@@ -35,11 +36,12 @@ public class SecurityConfig {
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/auth/**", "/error").permitAll();
-                    if (requireAuth) {
-                        auth.anyRequest().authenticated();
-                    } else {
-                        auth.anyRequest().permitAll();
+                    if (!requireAuth) {
+                        auth.requestMatchers(HttpMethod.GET,
+                                "/api/coworking-spaces", "/api/coworking-spaces/", "/api/coworking-spaces/*",
+                                "/api/coworking-spaces/*/rooms", "/api/coworking-spaces/*/equipment").permitAll();
                     }
+                    auth.anyRequest().authenticated();
                 });
         return http.build();
     }

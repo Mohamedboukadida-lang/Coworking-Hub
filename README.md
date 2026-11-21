@@ -25,7 +25,8 @@ The Spring Boot API lives in `coworkinghub/` (Java 21, Spring Boot 3.5). Configu
 | `DB_PASSWORD` | *(empty)* | Database password |
 | `JWT_SECRET` | *(random per start)* | HS256 signing key, at least 32 bytes. Set it in production, or tokens stop working after a restart |
 | `JWT_EXPIRATION` | `PT24H` | Token lifetime (ISO-8601 duration) |
-| `APP_SECURITY_REQUIRE_AUTH` | `false` | `true` requires a token on every endpoint except `/api/auth/**` |
+| `APP_SECURITY_REQUIRE_AUTH` | `false` | `true` also requires a token to browse spaces, rooms and equipment |
+| `APP_ADMIN_EMAIL` / `APP_ADMIN_PASSWORD` | *(unset)* | Creates the first ADMIN account at startup if no account has that email |
 | `SERVER_PORT` | `8081` | HTTP port |
 
 ```bash
@@ -35,15 +36,34 @@ DB_PASSWORD=your-password JWT_SECRET=$(openssl rand -hex 32) ./mvnw spring-boot:
 
 Tests use an in-memory H2 database and need no PostgreSQL server: `./mvnw test`.
 
-### Authentication
+### Authentication and access rules
 
-`POST /api/auth/register` and `POST /api/auth/login` return `{ "token": "...", "user": {...} }`. Send the token as `Authorization: Bearer <token>`. With `APP_SECURITY_REQUIRE_AUTH=false` (the default, so the released mobile app keeps working) the token is optional: when present it identifies the caller, who becomes the owner of spaces they create and the user of reservations they make. An invalid or expired token is always rejected with `401`. Passwords are stored as BCrypt hashes and never returned.
+`POST /api/auth/register` and `POST /api/auth/login` return `{ "token": "...", "user": {...} }`. Send the token as `Authorization: Bearer <token>`. Passwords are stored as BCrypt hashes and never returned. Accounts can self-register as `USER` or `OWNER`; `ADMIN` accounts come from `APP_ADMIN_EMAIL`/`APP_ADMIN_PASSWORD` or are created by another admin.
 
-### Pricing
+| Action | Allowed for |
+|---|---|
+| Browse spaces, rooms, equipment | Anyone (a token is needed only with `APP_SECURITY_REQUIRE_AUTH=true`) |
+| Create a coworking space | OWNER and ADMIN accounts; the caller becomes its owner |
+| Edit or delete a space, add rooms or equipment | The space's owner, or an ADMIN |
+| Book | Any logged-in account; the reservation belongs to the caller |
+| See a reservation | The person who booked it, the space's owner, or an ADMIN |
+| Accept or decline a reservation | The space's owner, or an ADMIN |
+| Cancel a reservation | The person who booked it, the space's owner, or an ADMIN |
+| Edit a profile, see its email | The account itself, or an ADMIN (others see the profile without email) |
+| `POST /api/users/` (create any account type) | ADMIN only |
 
-A reservation is placed in the cheapest room of the space that can hold `numberOfPeople`:
+Missing or invalid token: `401`. Not allowed: `403`.
+
+### Booking and pricing
+
+A reservation needs `date` (`yyyy-MM-dd`), `time` (`HH:mm`), `hours`, `numberOfPeople` and `coworkingSpaceId`, and must end by midnight. It is placed in the cheapest room that can hold `numberOfPeople` **and is free for the whole slot** (declined reservations do not hold a room):
 `totalPrice = (room.pricePerPersonPerHour × numberOfPeople + sum of equipment prices) × hours`.
-If no room is large enough the request is rejected with `400`, so a space needs at least one room before it can be booked.
+
+- No room big enough: `400`.
+- Every big-enough room already booked for an overlapping slot: `409`.
+- Back-to-back bookings (one ends at 12:00, the next starts at 12:00) are allowed.
+- The room row is locked while it is checked, so simultaneous requests cannot book the same slot twice.
+- Re-accepting a declined reservation whose slot has since been taken: `409`.
 
 ### API
 
@@ -51,7 +71,7 @@ If no room is large enough the request is rejected with `400`, so a space needs 
 |---|---|---|
 | `POST` | `/api/auth/register` | Create an account (USER or OWNER) and get a token |
 | `POST` | `/api/auth/login` | Log in and get a token |
-| `POST` | `/api/users/` | Create an account (used by the current mobile app) |
+| `POST` | `/api/users/` | Create an account of any type (admin only) |
 | `GET` | `/api/users/me` | The authenticated account |
 | `GET` / `PUT` | `/api/users/{id}` | Read / update a profile |
 | `GET` / `POST` | `/api/coworking-spaces/` | List / create coworking spaces |
@@ -59,12 +79,12 @@ If no room is large enough the request is rejected with `400`, so a space needs 
 | `GET` / `POST` | `/api/coworking-spaces/{id}/rooms` | List / add rooms (`capacity`, `pricePerPersonPerHour`) |
 | `GET` | `/api/coworking-spaces/{id}/equipment` | List a space's equipment |
 | `POST` | `/api/coworking-spaces/{id}/add-random-equipment` | Add one sample item of each equipment type |
-| `GET` / `POST` | `/api/reservations/` | List (filter with `?userId=` / `?coworkingSpaceId=`) / create a reservation |
+| `GET` / `POST` | `/api/reservations/` | List (your own by default; `?coworkingSpaceId=` for a space you own; admins may also use `?userId=`) / create a reservation |
 | `GET` | `/api/reservations/me` | The authenticated account's reservations |
 | `GET` / `DELETE` | `/api/reservations/{id}` | Read / delete a reservation |
 | `PUT` | `/api/reservations/{id}/status` | Accept or decline a reservation |
 
-Errors are RFC 7807 problem details: `400` invalid input, `401` missing/invalid token, `404` unknown ID, `409` conflict.
+Errors are RFC 7807 problem details: `400` invalid input, `401` missing/invalid token, `403` not allowed, `404` unknown ID, `409` conflict (slot taken, duplicate email, space still in use).
 
 ## Key Features
 

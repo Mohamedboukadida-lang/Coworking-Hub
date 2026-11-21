@@ -73,7 +73,7 @@ public class CoworkingSpaceController {
 
     @PostMapping("/{id}/add-random-equipment")
     public ResponseEntity<String> addRandomEquipment(@PathVariable Long id) {
-        CoworkingSpace space = coworkingSpaceService.getById(id);
+        CoworkingSpace space = coworkingSpaceService.getManageable(id);
         equipmentService.addRandomEquipmentToCoworkingSpace(space);
         return ResponseEntity.ok("Random equipment added successfully to the coworking space with ID: " + id);
     }

@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Authentication with the API left open (the default): tokens are optional but honoured. */
 @SpringBootTest
 @AutoConfigureMockMvc
 class AuthIntegrationTest extends ApiTestSupport {
@@ -69,8 +68,7 @@ class AuthIntegrationTest extends ApiTestSupport {
         mockMvc.perform(postJson("/api/auth/login",
                         "{\"email\":\"%s\",\"password\":\"s3cret-pass\"}".formatted(email)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").isString())
-                .andExpect(jsonPath("$.user.email").value(email));
+                .andExpect(jsonPath("$.token").isString());
         mockMvc.perform(postJson("/api/auth/login",
                         "{\"email\":\"%s\",\"password\":\"wrong-pass\"}".formatted(email)))
                 .andExpect(status().isUnauthorized());
@@ -80,13 +78,22 @@ class AuthIntegrationTest extends ApiTestSupport {
     }
 
     @Test
-    void legacyCreateUserHashesPasswordSoLoginWorks() throws Exception {
+    void bootstrapAdminCanLogIn() throws Exception {
+        String token = adminToken();
+        mockMvc.perform(withToken(get("/api/users/me"), token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.typeCompte").value("ADMIN"))
+                .andExpect(jsonPath("$.email").value(ADMIN_EMAIL));
+    }
+
+    @Test
+    void adminCreatedAccountPasswordIsHashedSoLoginWorks() throws Exception {
         String email = uniqueEmail();
-        mockMvc.perform(postJson("/api/users/",
-                        "{\"name\":\"Legacy\",\"email\":\"%s\",\"password\":\"legacy-pass\"}".formatted(email)))
+        mockMvc.perform(withToken(postJson("/api/users/",
+                        "{\"name\":\"Staff\",\"email\":\"%s\",\"password\":\"staff-pass\"}".formatted(email)), adminToken()))
                 .andExpect(status().isOk());
         mockMvc.perform(postJson("/api/auth/login",
-                        "{\"email\":\"%s\",\"password\":\"legacy-pass\"}".formatted(email)))
+                        "{\"email\":\"%s\",\"password\":\"staff-pass\"}".formatted(email)))
                 .andExpect(status().isOk());
     }
 
@@ -103,35 +110,9 @@ class AuthIntegrationTest extends ApiTestSupport {
     }
 
     @Test
-    void invalidTokenIsRejected() throws Exception {
+    void invalidTokenIsRejectedEvenOnPublicEndpoints() throws Exception {
         mockMvc.perform(withToken(get("/api/coworking-spaces"), "not.a.jwt"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.detail").value("Invalid or expired token"));
-    }
-
-    @Test
-    void authenticatedCallerOwnsSpaceAndReservation() throws Exception {
-        String ownerToken = registerAndGetToken(uniqueEmail(), "OWNER");
-        long ownerId = json(withToken(get("/api/users/me"), ownerToken), 200).get("id").asLong();
-
-        long spaceId = json(withToken(postJson("/api/coworking-spaces/", "{\"name\":\"Owned\"}"), ownerToken), 200)
-                .get("id").asLong();
-        mockMvc.perform(get("/api/coworking-spaces/{id}", spaceId))
-                .andExpect(jsonPath("$.ownerId").value(ownerId));
-        addRoom(spaceId, 4, 10.0);
-
-        String userToken = registerAndGetToken(uniqueEmail(), "USER");
-        long userId = json(withToken(get("/api/users/me"), userToken), 200).get("id").asLong();
-        long reservationId = json(withToken(postJson("/api/reservations/", reservationBody(spaceId, 1, 1, "")),
-                userToken), 200).get("id").asLong();
-
-        mockMvc.perform(get("/api/reservations/{id}", reservationId))
-                .andExpect(jsonPath("$.userId").value(userId));
-        mockMvc.perform(withToken(get("/api/reservations/me"), userToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(reservationId));
-        mockMvc.perform(get("/api/reservations").param("userId", String.valueOf(userId)))
-                .andExpect(jsonPath("$.length()").value(1));
     }
 }

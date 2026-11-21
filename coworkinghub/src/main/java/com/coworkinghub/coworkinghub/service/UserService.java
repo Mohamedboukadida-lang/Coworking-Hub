@@ -2,6 +2,7 @@ package com.coworkinghub.coworkinghub.service;
 
 import com.coworkinghub.coworkinghub.dto.AuthResponse;
 import com.coworkinghub.coworkinghub.dto.LoginRequest;
+import com.coworkinghub.coworkinghub.dto.PublicProfile;
 import com.coworkinghub.coworkinghub.dto.RegisterRequest;
 import com.coworkinghub.coworkinghub.dto.UserUpdateRequest;
 import com.coworkinghub.coworkinghub.exception.ApiException;
@@ -9,6 +10,7 @@ import com.coworkinghub.coworkinghub.exception.ResourceNotFoundException;
 import com.coworkinghub.coworkinghub.model.AccountType;
 import com.coworkinghub.coworkinghub.model.Compte;
 import com.coworkinghub.coworkinghub.repository.UserRepository;
+import com.coworkinghub.coworkinghub.security.AccessService;
 import com.coworkinghub.coworkinghub.security.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,16 +23,20 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AccessService accessService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
+                       AccessService accessService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.accessService = accessService;
     }
 
-    /** Legacy creation endpoint used by the mobile app. Hashes a password if one is supplied. */
+    /** Admin-only account creation (any type, including ADMIN). Hashes a password if one is supplied. */
     @Transactional
     public Compte createUser(Compte compte) {
+        accessService.requireAdmin();
         compte.setId(null);
         if (compte.getEmail() != null) {
             compte.setEmail(normalizeEmail(compte.getEmail()));
@@ -76,9 +82,26 @@ public class UserService {
         return userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User", id));
     }
 
+    @Transactional(readOnly = true)
+    public Compte me() {
+        return accessService.caller();
+    }
+
+    /** The full account for the account itself or an admin; a {@link PublicProfile} (no email) for others. */
+    @Transactional(readOnly = true)
+    public Object getVisibleProfile(Long id) {
+        Compte compte = getById(id);
+        Compte caller = accessService.caller();
+        if (AccessService.isAdmin(caller) || caller.getId().equals(compte.getId())) {
+            return compte;
+        }
+        return PublicProfile.of(compte);
+    }
+
     @Transactional
     public Compte update(Long id, UserUpdateRequest request) {
         Compte compte = getById(id);
+        accessService.requireSelfOrAdmin(id);
         if (request.name() != null) compte.setName(request.name());
         if (request.surname() != null) compte.setSurname(request.surname());
         if (request.age() != null) compte.setAge(request.age());

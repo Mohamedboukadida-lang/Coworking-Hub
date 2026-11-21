@@ -3,7 +3,6 @@ package com.coworkinghub.coworkinghub.controller;
 import com.coworkinghub.coworkinghub.model.Reservation;
 import com.coworkinghub.coworkinghub.model.ReservationDto;
 import com.coworkinghub.coworkinghub.model.ReservationStatusUpdateDto;
-import com.coworkinghub.coworkinghub.security.CurrentUser;
 import com.coworkinghub.coworkinghub.service.ReservationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +33,7 @@ public class ReservationController {
 
     @GetMapping("/me")
     public ResponseEntity<List<Reservation>> myReservations() {
-        return ResponseEntity.ok(reservationService.find(CurrentUser.requireId(), null));
+        return ResponseEntity.ok(reservationService.findMine());
     }
 
     @GetMapping("/{id}")

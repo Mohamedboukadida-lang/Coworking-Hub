@@ -7,7 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Optional;
 
-/** Access to the account id of the caller, as set by {@link JwtAuthenticationFilter}. */
+/** The account id of the caller, as set by {@link JwtAuthenticationFilter}. Prefer {@link AccessService#caller()}. */
 public final class CurrentUser {
 
     private CurrentUser() {

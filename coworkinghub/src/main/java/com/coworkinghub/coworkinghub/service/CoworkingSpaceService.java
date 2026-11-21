@@ -6,8 +6,7 @@ import com.coworkinghub.coworkinghub.model.CoworkingSpace;
 import com.coworkinghub.coworkinghub.model.Room;
 import com.coworkinghub.coworkinghub.repository.CoworkingSpaceRepository;
 import com.coworkinghub.coworkinghub.repository.RoomRepository;
-import com.coworkinghub.coworkinghub.repository.UserRepository;
-import com.coworkinghub.coworkinghub.security.CurrentUser;
+import com.coworkinghub.coworkinghub.security.AccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,21 +17,21 @@ public class CoworkingSpaceService {
 
     private final CoworkingSpaceRepository coworkingSpaceRepository;
     private final RoomRepository roomRepository;
-    private final UserRepository userRepository;
+    private final AccessService accessService;
 
     public CoworkingSpaceService(CoworkingSpaceRepository coworkingSpaceRepository,
                                  RoomRepository roomRepository,
-                                 UserRepository userRepository) {
+                                 AccessService accessService) {
         this.coworkingSpaceRepository = coworkingSpaceRepository;
         this.roomRepository = roomRepository;
-        this.userRepository = userRepository;
+        this.accessService = accessService;
     }
 
-    /** Creates a space; the authenticated caller, if any, becomes its owner. */
+    /** Owner and admin accounts may create spaces; the caller becomes the owner. */
     @Transactional
     public CoworkingSpace createCoworkingSpace(CoworkingSpace coworkingSpace) {
         coworkingSpace.setId(null);
-        CurrentUser.id().flatMap(userRepository::findById).ifPresent(coworkingSpace::setOwner);
+        coworkingSpace.setOwner(accessService.requireCanCreateSpace());
         return coworkingSpaceRepository.save(coworkingSpace);
     }
 
@@ -47,9 +46,17 @@ public class CoworkingSpaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Coworking space", id));
     }
 
+    /** The space, after checking the caller is its owner or an admin. */
+    @Transactional(readOnly = true)
+    public CoworkingSpace getManageable(Long id) {
+        CoworkingSpace space = getById(id);
+        accessService.requireCanManage(space);
+        return space;
+    }
+
     @Transactional
     public CoworkingSpace update(Long id, CoworkingSpaceUpdateRequest request) {
-        CoworkingSpace space = getById(id);
+        CoworkingSpace space = getManageable(id);
         if (request.name() != null) space.setName(request.name());
         if (request.address() != null) space.setAddress(request.address());
         if (request.coordinateX() != null) space.setCoordinateX(request.coordinateX());
@@ -61,20 +68,20 @@ public class CoworkingSpaceService {
     /** Fails with 409 while rooms, equipment or reservations still reference the space. */
     @Transactional
     public void delete(Long id) {
-        coworkingSpaceRepository.delete(getById(id));
+        coworkingSpaceRepository.delete(getManageable(id));
         coworkingSpaceRepository.flush();
     }
 
     @Transactional
     public Room addRoom(Long spaceId, Room room) {
         room.setId(null);
-        room.setCoworkingSpace(getById(spaceId));
+        room.setCoworkingSpace(getManageable(spaceId));
         return roomRepository.save(room);
     }
 
     @Transactional(readOnly = true)
     public List<Room> findRooms(Long spaceId) {
         getById(spaceId);
-        return roomRepository.findByCoworkingSpaceId(spaceId);
+        return roomRepository.findByCoworkingSpace_Id(spaceId);
     }
 }
