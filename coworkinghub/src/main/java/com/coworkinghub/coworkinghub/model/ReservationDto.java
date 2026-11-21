@@ -18,9 +18,12 @@ public class ReservationDto {
     private Date date;
     private String time;
 
+    // Both are needed to price the reservation.
+    @NotNull
     @Positive
     private Integer hours;
 
+    @NotNull
     @Positive
     private Integer numberOfPeople;
 

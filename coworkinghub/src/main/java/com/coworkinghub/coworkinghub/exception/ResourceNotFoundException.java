@@ -1,10 +1,10 @@
 package com.coworkinghub.coworkinghub.exception;
 
-/**
- * Thrown when a requested entity does not exist. Mapped to HTTP 404 by {@link ApiExceptionHandler}.
- */
-public class ResourceNotFoundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+/** Thrown when a requested entity does not exist; mapped to HTTP 404. */
+public class ResourceNotFoundException extends ApiException {
     public ResourceNotFoundException(String resource, Long id) {
-        super(resource + " not found with id " + id);
+        super(HttpStatus.NOT_FOUND, resource + " not found with id " + id);
     }
 }

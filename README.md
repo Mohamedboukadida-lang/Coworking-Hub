@@ -16,33 +16,55 @@ To build a robust and scalable application, we employed a combination of modern 
 
 ## Running the backend
 
-The Spring Boot API lives in `coworkinghub/` (Java 21, Spring Boot 3.5). Database credentials are read from environment variables:
+The Spring Boot API lives in `coworkinghub/` (Java 21, Spring Boot 3.5). Configuration comes from environment variables:
 
-| Variable | Default |
-|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/postgres` |
-| `DB_USERNAME` | `postgres` |
-| `DB_PASSWORD` | *(empty)* |
-| `SERVER_PORT` | `8081` |
+| Variable | Default | Purpose |
+|---|---|---|
+| `DB_URL` | `jdbc:postgresql://localhost:5432/postgres` | PostgreSQL JDBC URL |
+| `DB_USERNAME` | `postgres` | Database user |
+| `DB_PASSWORD` | *(empty)* | Database password |
+| `JWT_SECRET` | *(random per start)* | HS256 signing key, at least 32 bytes. Set it in production, or tokens stop working after a restart |
+| `JWT_EXPIRATION` | `PT24H` | Token lifetime (ISO-8601 duration) |
+| `APP_SECURITY_REQUIRE_AUTH` | `false` | `true` requires a token on every endpoint except `/api/auth/**` |
+| `SERVER_PORT` | `8081` | HTTP port |
 
 ```bash
 cd coworkinghub
-DB_PASSWORD=your-password ./mvnw spring-boot:run
+DB_PASSWORD=your-password JWT_SECRET=$(openssl rand -hex 32) ./mvnw spring-boot:run
 ```
 
 Tests use an in-memory H2 database and need no PostgreSQL server: `./mvnw test`.
+
+### Authentication
+
+`POST /api/auth/register` and `POST /api/auth/login` return `{ "token": "...", "user": {...} }`. Send the token as `Authorization: Bearer <token>`. With `APP_SECURITY_REQUIRE_AUTH=false` (the default, so the released mobile app keeps working) the token is optional: when present it identifies the caller, who becomes the owner of spaces they create and the user of reservations they make. An invalid or expired token is always rejected with `401`. Passwords are stored as BCrypt hashes and never returned.
+
+### Pricing
+
+A reservation is placed in the cheapest room of the space that can hold `numberOfPeople`:
+`totalPrice = (room.pricePerPersonPerHour × numberOfPeople + sum of equipment prices) × hours`.
+If no room is large enough the request is rejected with `400`, so a space needs at least one room before it can be booked.
 
 ### API
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/users/` | Create an account |
-| `POST` | `/api/coworking-spaces/` | Create a coworking space |
+| `POST` | `/api/auth/register` | Create an account (USER or OWNER) and get a token |
+| `POST` | `/api/auth/login` | Log in and get a token |
+| `POST` | `/api/users/` | Create an account (used by the current mobile app) |
+| `GET` | `/api/users/me` | The authenticated account |
+| `GET` / `PUT` | `/api/users/{id}` | Read / update a profile |
+| `GET` / `POST` | `/api/coworking-spaces/` | List / create coworking spaces |
+| `GET` / `PUT` / `DELETE` | `/api/coworking-spaces/{id}` | Read / update / delete a space (`409` while it still has rooms, equipment or reservations) |
+| `GET` / `POST` | `/api/coworking-spaces/{id}/rooms` | List / add rooms (`capacity`, `pricePerPersonPerHour`) |
+| `GET` | `/api/coworking-spaces/{id}/equipment` | List a space's equipment |
 | `POST` | `/api/coworking-spaces/{id}/add-random-equipment` | Add one sample item of each equipment type |
-| `POST` | `/api/reservations/` | Create a reservation (status `PENDING`) |
+| `GET` / `POST` | `/api/reservations/` | List (filter with `?userId=` / `?coworkingSpaceId=`) / create a reservation |
+| `GET` | `/api/reservations/me` | The authenticated account's reservations |
+| `GET` / `DELETE` | `/api/reservations/{id}` | Read / delete a reservation |
 | `PUT` | `/api/reservations/{id}/status` | Accept or decline a reservation |
 
-Unknown IDs return `404` and invalid bodies return `400`, both as RFC 7807 problem details.
+Errors are RFC 7807 problem details: `400` invalid input, `401` missing/invalid token, `404` unknown ID, `409` conflict.
 
 ## Key Features
 

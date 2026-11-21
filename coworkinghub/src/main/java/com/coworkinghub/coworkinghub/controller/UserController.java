@@ -1,12 +1,11 @@
 package com.coworkinghub.coworkinghub.controller;
 
+import com.coworkinghub.coworkinghub.dto.UserUpdateRequest;
 import com.coworkinghub.coworkinghub.model.Compte;
+import com.coworkinghub.coworkinghub.security.CurrentUser;
 import com.coworkinghub.coworkinghub.service.UserService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -21,5 +20,20 @@ public class UserController {
     @PostMapping({"", "/"})
     public ResponseEntity<Compte> createUser(@RequestBody Compte compte) {
         return ResponseEntity.ok(userService.createUser(compte));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<Compte> me() {
+        return ResponseEntity.ok(userService.getById(CurrentUser.requireId()));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Compte> getUser(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getById(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Compte> updateUser(@PathVariable Long id, @RequestBody UserUpdateRequest request) {
+        return ResponseEntity.ok(userService.update(id, request));
     }
 }
